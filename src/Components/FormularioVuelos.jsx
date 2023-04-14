@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import ResultadoVuelos from "./ResultadosVuelos";
 import moment from "moment-timezone";
+import "moment-timezone/builds/moment-timezone-with-data";
 
 const FormularioVuelos = () => {
   const [aeropuertoOrigen, setAeropuertoOrigen] = useState("");
@@ -10,14 +11,56 @@ const FormularioVuelos = () => {
   const [fechaVuelta, setFechaVuelta] = useState("");
   const [mostrarResultados, setMostrarResultados] = useState(false);
 
-
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const fechaIdaUnix = new Date(fechaIda).getTime() / 1000;
-    const fechaVueltaUnix = tipoVuelo ? null : new Date(fechaVuelta).getTime() / 1000;
-    
-    console.log(fechaIdaUnix);
-    ;
+
+    // const fecha = new Date(fechaIda + "T00:00:00");
+    // const fechaIdaUnix = Math.floor(fecha.getTime() / 1000);
+
+    // const prueba = fechaIdaUnix * 1000;
+    // const fechaVueltaUnix = tipoVuelo
+    //   ? null
+    //   : new Date(fechaVuelta).getTime() / 1000;
+
+    // console.log(prueba);
+
+    const airportCode = "EZE"; // aeropuerto de origen
+    const dateStr = "2023-12-15"; // fecha de salida
+    const timeZone = ""; // timezone del aeropuerto de origen
+
+    fetch(
+      "https://raw.githubusercontent.com/mwgg/Airports/master/airports.json"
+    )
+      .then((response) => response.json())
+      .then((data) => {
+        const aeropuerto = Object.values(data).find(
+          (airport) => airport.iata === aeropuertoOrigen
+        );
+        if (aeropuerto) {
+          const timeZone = aeropuerto.tz;
+
+          const departureDate = moment.tz(`${fechaIda} 12:00:00`, timeZone);
+
+          // verifica si la zona horaria del aeropuerto observa la hora de verano en la fecha de salida
+          const isDst = departureDate.isDST();
+      
+          // si la zona horaria del aeropuerto observa la hora de verano en la fecha de salida, ajusta la hora en consecuencia
+          if (isDst) {
+            departureDate.subtract(1, "hour");
+          }
+      
+          // calcula el timestamp Unix
+          const timestampUnix = departureDate.valueOf();
+          console.log(timestampUnix);
+
+        } else {
+          console.log(
+            `No se encontró ningún aeropuerto con el código IATA ${aeropuertoOrigen}`
+          );
+        }
+      })
+      .catch((error) => console.error(error));
+
   };
 
   return (
@@ -80,14 +123,15 @@ const FormularioVuelos = () => {
         </div>
       )}
       <button onClick={() => setMostrarResultados(true)}>Buscar vuelos</button>
-{mostrarResultados && <ResultadoVuelos
-  aeropuertoOrigen={aeropuertoOrigen}
-  aeropuertoDestino={aeropuertoDestino}
-  fechaIda={fechaIda}
-  fechaVuelta={fechaVuelta}
-  tipoVuelo={tipoVuelo}
-/>}
-
+      {mostrarResultados && (
+        <ResultadoVuelos
+          aeropuertoOrigen={aeropuertoOrigen}
+          aeropuertoDestino={aeropuertoDestino}
+          fechaIda={fechaIda}
+          fechaVuelta={fechaVuelta}
+          tipoVuelo={tipoVuelo}
+        />
+      )}
     </form>
   );
 };
